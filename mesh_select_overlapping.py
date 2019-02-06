@@ -274,6 +274,14 @@ def select_overlapping(context, overlapping, distance, intersections, inset, cop
     # Deselect all first
     #bpy.ops.mesh.select_all(action = 'DESELECT')
 
+    # force context update in edit mode
+    # apparently there's a bug in scene.update()
+    bpy.context.scene.update()
+    mode = bpy.context.object.mode
+    if mode != 'OBJECT':
+        bpy.ops.object.mode_set(mode = 'OBJECT')
+        bpy.ops.object.mode_set(mode = mode)
+
     # select in context
     (vertex_mode, edge_mode, face_mode) = bpy.context.tool_settings.mesh_select_mode
 
@@ -357,6 +365,10 @@ class SelectOverlapping(bpy.types.Operator):
         max = radians(90.0),
         description = "Angle tolerance between coplanar faces",
         )
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None and context.active_object.type == 'MESH'
 
     def execute(self, context):
         select_overlapping(context, self.overlapping, self.distance, self.intersections, self.inset, self.coplanar, self.tolerance, self.angle)
