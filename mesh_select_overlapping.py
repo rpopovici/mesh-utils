@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Select Overlapping Mesh",
     "author": "rpopovici",
-    "version": (0, 1),
+    "version": (0, 2),
     "blender": (2, 80, 0),
     "location": "(Edit Mode) Select > Select All by Trait",
     "description": "Select overlapping vertices/edges/faces",
@@ -270,38 +270,16 @@ def select_duplicate_faces(context, distance):
     bmesh.update_edit_mesh(mesh, False, False)
     return
 
-def select_overlapping(context, overlapping, distance, intersections, inset, coplanar, tolerance, angle):
-    # Deselect all first
-    #bpy.ops.mesh.select_all(action = 'DESELECT')
-
-    # force context update in edit mode
-    # apparently there's a bug in scene.update()
-    bpy.context.scene.update()
-    mode = bpy.context.object.mode
-    if mode != 'OBJECT':
-        bpy.ops.object.mode_set(mode = 'OBJECT')
-        bpy.ops.object.mode_set(mode = mode)
-
-    # select in context
+def get_mesh_select_mode():
     (vertex_mode, edge_mode, face_mode) = bpy.context.tool_settings.mesh_select_mode
-
-    if overlapping:
-        # vertex mode
-        if vertex_mode:
-            if context.active_object.data.vertices:
-                select_duplicate_vertices(context, distance)        
-        # edge mode
-        elif edge_mode:
-            if context.active_object.data.edges:
-                select_duplicate_edges(context, distance)
-        # face mode
-        elif face_mode:
-            if context.active_object.data.polygons:
-                select_duplicate_faces(context, distance)
-
-    if (intersections or coplanar) and face_mode:
-        if context.active_object.data.polygons:
-            select_intersect_faces(context, intersections, coplanar, inset, tolerance, angle)
+    if vertex_mode:
+        return 'VERT'
+    elif edge_mode:
+        return 'EDGE'
+    elif face_mode:
+        return 'FACE'
+    else:
+        return 'VERT'
 
 class SelectOverlapping(bpy.types.Operator):
     """Select overlapping mesh"""
@@ -309,8 +287,18 @@ class SelectOverlapping(bpy.types.Operator):
     bl_label = 'Select Overlapping'
     bl_options = {'REGISTER', 'UNDO'}
 
+    select_type: bpy.props.EnumProperty(
+        items=[
+                ('VERT', "Vertices", "Select overlapping vertices"),
+                ('EDGE', "Edges", "Select overlapping edges"),
+                ('FACE', "Faces", "Select overlapping faces"),
+                ],
+        name="Selection Mode",
+        description="",
+        )
+
     overlapping: bpy.props.BoolProperty(
-        name="Doubles",
+        name="Overlapping",
         description="Select overlapping mesh",
         default = True
         )
@@ -371,12 +359,110 @@ class SelectOverlapping(bpy.types.Operator):
         return context.active_object is not None and context.active_object.type == 'MESH'
 
     def execute(self, context):
-        select_overlapping(context, self.overlapping, self.distance, self.intersections, self.inset, self.coplanar, self.tolerance, self.angle)
+        self.select_overlapping(context, self.overlapping, self.distance, self.intersections, self.inset, self.coplanar, self.tolerance, self.angle)
         return {'FINISHED'}
 
     def invoke(self, context, event):
-        select_overlapping(context, self.overlapping, self.distance, self.intersections, self.inset, self.coplanar, self.tolerance, self.angle)
+        self.select_type = get_mesh_select_mode()
+        self.execute(context)
         return {"FINISHED"}
+
+    def draw(self, context):
+        mesh_select_mode = get_mesh_select_mode()
+        face_mode = mesh_select_mode == 'FACE'
+        
+        if self.select_type != mesh_select_mode:
+            self.select_type = mesh_select_mode
+        
+        layout = self.layout
+        scene = context.scene
+
+        #box = layout.box()
+        row = layout.row()
+        row.label(text="Selection Type:")
+        row.prop(self, "select_type", text="")
+
+        layout.separator()
+
+        # overlapping
+        box = layout.box()
+        row = box.row()
+        row.label(text="Doubles")
+        row.prop(self, "overlapping", text="")
+        distance_row = box.row()
+        distance_row.enabled = self.overlapping
+        distance_row.label(text="Distance")
+        distance_row.prop(self, "distance", text="")
+
+        # Intersections
+        box = layout.box()
+        box.enabled = face_mode
+        row = box.row()
+        row.label(text="Intersections")
+        row.prop(self, "intersections", text="")
+
+        distance_row = box.row()
+        distance_row.enabled = self.intersections
+        distance_row.label(text="Inset")
+        distance_row.prop(self, "inset", text="")
+
+        # Coplanar
+        box = layout.box()
+        box.enabled = face_mode
+        row = box.row()
+        row.label(text="Coplanar")
+        row.prop(self, "coplanar", text="")
+        
+        distance_row = box.row()
+        distance_row.enabled = self.coplanar
+        distance_row.label(text="Tolerance")
+        distance_row.prop(self, "tolerance", text="")
+
+        distance_row = box.row()
+        distance_row.enabled = self.coplanar
+        distance_row.label(text="Angle")
+        distance_row.prop(self, "angle", text="")
+
+    def select_overlapping(self, context, overlapping, distance, intersections, inset, coplanar, tolerance, angle):
+        # Selection mode - Vertex, Edge, Face
+        if self.select_type == 'VERT':
+            bpy.context.tool_settings.mesh_select_mode = [True, False, False]
+        elif self.select_type == 'EDGE':
+            bpy.context.tool_settings.mesh_select_mode = [False, True, False]
+        elif self.select_type == 'FACE':
+            bpy.context.tool_settings.mesh_select_mode = [False, False, True]                    
+
+        # Deselect all first
+        #bpy.ops.mesh.select_all(action = 'DESELECT')
+
+        # force context update in edit mode
+        # apparently there's a bug in scene.update()
+        bpy.context.scene.update()
+        mode = bpy.context.object.mode
+        if mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode = 'OBJECT')
+            bpy.ops.object.mode_set(mode = mode)
+
+        # select in context
+        (vertex_mode, edge_mode, face_mode) = bpy.context.tool_settings.mesh_select_mode
+
+        if overlapping:
+            # vertex mode
+            if vertex_mode:
+                if context.active_object.data.vertices:
+                    select_duplicate_vertices(context, distance)        
+            # edge mode
+            elif edge_mode:
+                if context.active_object.data.edges:
+                    select_duplicate_edges(context, distance)
+            # face mode
+            elif face_mode:
+                if context.active_object.data.polygons:
+                    select_duplicate_faces(context, distance)
+
+        if (intersections or coplanar) and face_mode:
+            if context.active_object.data.polygons:
+                select_intersect_faces(context, intersections, coplanar, inset, tolerance, angle)
 
 def menu_func(self, context):
     self.layout.operator(SelectOverlapping.bl_idname, text="Select Overlapping")
