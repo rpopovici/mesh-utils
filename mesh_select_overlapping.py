@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Select Overlapping Mesh",
     "author": "rpopovici",
-    "version": (0, 3),
+    "version": (0, 4),
     "blender": (2, 80, 0),
     "location": "(Edit Mode) Select > Select All by Trait",
     "description": "Select overlapping vertices/edges/faces",
@@ -161,10 +161,6 @@ def select_intersect_faces(context, intersections, coplanar, inset, tolerance, a
     bm_clone = bmesh.new()
     bm_clone.from_mesh(mesh)
 
-    # select all faces
-    for face in bm_clone.faces:
-        face.select_set(True)
-
     # split edges
     bmesh.ops.split_edges(bm_clone, edges = bm_clone.edges, verts = [], use_verts=False)
 
@@ -177,7 +173,6 @@ def select_intersect_faces(context, intersections, coplanar, inset, tolerance, a
 
     # inset thickness as factor of distance param
     thick_avg = thick_avg / len(bm_clone.faces) * inset
-    #print(thick_avg)
 
     # clamp on edge length
     min_edge_len = 1000000.0
@@ -193,9 +188,9 @@ def select_intersect_faces(context, intersections, coplanar, inset, tolerance, a
 
     # inset faces by very small amount
     #inset_faces = bmesh.ops.inset_individual(bm_clone, faces=bm_clone.faces, thickness=thick_avg, depth=0.0, use_even_offset=False, use_interpolate=True, use_relative_offset=False)
-    bmesh.ops.inset_region(bm_clone, faces=bm_clone.faces, faces_exclude=[], use_boundary=True, use_even_offset=True, use_interpolate=True, use_relative_offset=False, use_edge_rail=False, thickness=thick_avg, depth=0.0, use_outset=False)
-    faces_not_select = [face for face in bm_clone.faces if not face.select]
-    bmesh.ops.delete(bm_clone, geom=faces_not_select, context='FACES')
+    inset_faces = bmesh.ops.inset_region(bm_clone, faces=bm_clone.faces, faces_exclude=[], use_boundary=True, use_even_offset=True, use_interpolate=True, use_relative_offset=False, use_edge_rail=False, thickness=thick_avg, depth=0.0, use_outset=False)
+    faces_to_delete = [face for face in inset_faces['faces']]
+    bmesh.ops.delete(bm_clone, geom=faces_to_delete, context='FACES')
     bmesh.ops.recalc_face_normals(bm_clone, faces=bm_clone.faces)
 
     if (intersections):
@@ -206,21 +201,26 @@ def select_intersect_faces(context, intersections, coplanar, inset, tolerance, a
             (first_index, second_index) = pair
             # exclude pairs with same index because these are false positive as result of cloning
             if first_index != second_index:
-                bm.faces[first_index].select_set(True)
-                bm.faces[second_index].select_set(True)
+                # exclude hidden
+                if (not bm.faces[first_index].hide) and (not bm.faces[second_index].hide):
+                    bm.faces[first_index].select_set(True)
+                    bm.faces[second_index].select_set(True)
 
     # coplanar intersections
     if (coplanar):
         bvh_tree = BVHTree.FromBMesh(bm, epsilon = 0.0)
         for face in bm_clone.faces:
-            # skip if already selected
-            if bm.faces[face.index].select:
-                continue
             for vert in face.verts:
+                # skip if already selected or hidden
+                if bm.faces[face.index].select or bm.faces[face.index].hide:
+                    continue
                 nearest_list = bvh_tree.find_nearest_range(vert.co, tolerance)
                 for (location, normal, index, dist) in nearest_list:
                     org_face = bm.faces[face.index]
                     co_face = bm.faces[index]
+                    # skip if already selected or hidden
+                    if (org_face.select and co_face.select) or org_face.hide or co_face.hide:
+                        continue
                     if (index is not None) and (index != face.index) and collinear(org_face.normal, co_face.normal, angle): #(measure(vert.co, location) < 0.0001):
                         #print(co_face.index, location, index, dist)
                         if bmesh.geometry.intersect_face_point(bm.faces[index], vert.co) and (not adjacent(org_face, co_face)):
