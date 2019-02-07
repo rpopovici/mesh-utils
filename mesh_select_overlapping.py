@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Select Overlapping Mesh",
     "author": "rpopovici",
-    "version": (0, 2),
+    "version": (0, 3),
     "blender": (2, 80, 0),
     "location": "(Edit Mode) Select > Select All by Trait",
     "description": "Select overlapping vertices/edges/faces",
@@ -27,7 +27,7 @@ def measure (first, second):
 	return distance
 
 def collinear(vec1, vec2, epsilon):
-    return ((vec1.angle(vec2) < epsilon) or abs((vec1.angle(vec2) - radians(180)) < epsilon))
+    return ((vec1.angle(vec2) < epsilon) or (abs(radians(180) - vec1.angle(vec2)) < epsilon))
 
 def adjacent(face, another_face):
     adjacent_faces = []
