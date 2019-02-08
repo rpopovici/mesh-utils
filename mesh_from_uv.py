@@ -53,16 +53,16 @@ class MeshFromUV(bpy.types.Operator):
     size: bpy.props.FloatProperty(
         name = "Size",
         subtype ='DISTANCE',
-        default = 1.0,
+        default = 10.0,
         min = 0.1,
-        max = 10.0,
+        max = 100.0,
         description = "Object size",
         unit ='LENGTH',
         )
 
     interpolate: bpy.props.FloatProperty(
         name = "Interpolate",
-        default = 0.0,
+        default = 1.0,
         min = 0.0,
         max = 1.0,
         description = "Interpolate between 3D coords and UV coords",
