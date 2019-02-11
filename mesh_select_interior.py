@@ -12,6 +12,16 @@ bl_info = {
 
 import bpy
 import bmesh
+from mathutils import Vector
+
+def hit_test(ao_map, resolution, xpos, ypos):
+    hit = False
+    for i in range(-1, 1):
+        for j in range(-1, 1):
+            if ao_map.pixels[4 * (xpos + i + resolution * (ypos + j)) + 0] == 0:
+                hit = True
+
+    return hit
 
 def select_interior_faces(context, obj, resolution):
     ao_map_size = resolution
@@ -27,7 +37,7 @@ def select_interior_faces(context, obj, resolution):
 
     # quick face unwrap
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=66.0, island_margin=0.05, user_area_weight=0.0, use_aspect=True, stretch_to_bounds=True)
+    bpy.ops.uv.smart_project(angle_limit=1.0, island_margin=0.05, user_area_weight=0.0, use_aspect=True, stretch_to_bounds=True)
     bpy.ops.mesh.select_all(action='DESELECT')
 
     # creating a new material and add a new image texture node to it
@@ -63,7 +73,7 @@ def select_interior_faces(context, obj, resolution):
     #         obj.hide_render = True
 
     # start baking
-    bpy.ops.object.bake(type = 'AO', width = resolution, height = resolution) #, uv_layer = uv_layer.name)
+    bpy.ops.object.bake(type = 'AO', width = resolution, height = resolution, margin = 1) #, uv_layer = uv_layer.name)
 
     # select "black" faces from AO
     me = obj.data
@@ -73,6 +83,12 @@ def select_interior_faces(context, obj, resolution):
     #bm.faces.layers.tex.verify()
     uv_layer = bm.loops.layers.uv.get("__AO_UV_LAYER__")
 
+    # down scale Uvs
+    # for f in bm.faces:
+    #     for l in f.loops:
+    #         l[uv_layer].uv *= 0.99
+    #         l[uv_layer].uv += Vector((0.005, 0.005))
+
     for face in bm.faces:
         face_select = True
         for loop in face.loops:
@@ -81,9 +97,10 @@ def select_interior_faces(context, obj, resolution):
             xpos = round(uv.x * resolution)
             ypos = round(uv.y * resolution)
             # select face if RED color channel is black
-            if ao_map.pixels[4 * (xpos + resolution * ypos) + 0] != 0: 
+            #if ao_map.pixels[4 * (xpos + resolution * ypos) + 0] != 0:
+            if not hit_test(ao_map, resolution, xpos, ypos):
                 face_select = False
-        face.select = face_select
+        face.select_set(face_select)
 
     bmesh.update_edit_mesh(me)
 
