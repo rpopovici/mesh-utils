@@ -54,6 +54,12 @@ With BVHTree, the only limitation is related to the fact that I am insetting inw
 #### How fast it is?
 As fast as it can get. It's limited only by KDTree/BVHTree performance.
 
+#### Why AO map baking?
+Select interior faces could be implemented using the following techniques:
+- octree sampling. result is dependent on the resolution of the octree
+- Boolean intersection. Broken in blender 2.8
+- AO bake. baking has some advantages over the other solutions listed here. One of them is the fact that is not modifing the original mesh and it's able to identify "invisible" geometry
+
 #### Where do I get it from?
 https://github.com/rpopovici/blender-addons
 
