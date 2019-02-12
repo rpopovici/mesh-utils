@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Select Interior Faces",
     "author": "rpopovici",
-    "version": (0, 1),
+    "version": (0, 2),
     "blender": (2, 80, 0),
     "location": "(Edit Mode) Select > Select All by Trait",
     "description": "Select interior faces. This solution is based on AO map baking",
@@ -14,11 +14,11 @@ import bpy
 import bmesh
 from mathutils import Vector
 
-def hit_test(ao_map, resolution, xpos, ypos):
+def hit_test(pixels, resolution, xpos, ypos):
     hit = False
     for i in range(-1, 1):
         for j in range(-1, 1):
-            if ao_map.pixels[4 * (xpos + i + resolution * (ypos + j)) + 0] == 0:
+            if pixels[4 * (xpos + i + resolution * (ypos + j)) + 0] == 0:
                 hit = True
 
     return hit
@@ -89,16 +89,18 @@ def select_interior_faces(context, obj, resolution):
     #         l[uv_layer].uv *= 0.99
     #         l[uv_layer].uv += Vector((0.005, 0.005))
 
+    # Extract pixels to new array for performance gain
+    pixels_copy = ao_map.pixels[:]
     for face in bm.faces:
         face_select = True
         for loop in face.loops:
             luv = loop[uv_layer]
             uv = luv.uv
-            xpos = round(uv.x * resolution)
-            ypos = round(uv.y * resolution)
+            xpos = round(uv.x * (resolution - 1))
+            ypos = round(uv.y * (resolution - 1))
             # select face if RED color channel is black
             #if ao_map.pixels[4 * (xpos + resolution * ypos) + 0] != 0:
-            if not hit_test(ao_map, resolution, xpos, ypos):
+            if not hit_test(pixels_copy, resolution, xpos, ypos):
                 face_select = False
         face.select_set(face_select)
 
