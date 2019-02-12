@@ -37,7 +37,7 @@ def select_interior_faces(context, obj, resolution):
 
     # quick face unwrap
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=1.0, island_margin=0.05, user_area_weight=0.0, use_aspect=True, stretch_to_bounds=True)
+    bpy.ops.uv.smart_project(angle_limit=1.0, island_margin=0.1, user_area_weight=0.0, use_aspect=True, stretch_to_bounds=True)
     bpy.ops.mesh.select_all(action='DESELECT')
 
     # creating a new material and add a new image texture node to it
@@ -73,7 +73,7 @@ def select_interior_faces(context, obj, resolution):
     #         obj.hide_render = True
 
     # start baking
-    bpy.ops.object.bake(type = 'AO', width = resolution, height = resolution, margin = 1) #, uv_layer = uv_layer.name)
+    bpy.ops.object.bake(type = 'AO', width = resolution, height = resolution, margin = 4) #, uv_layer = uv_layer.name)
 
     # select "black" faces from AO
     me = obj.data
