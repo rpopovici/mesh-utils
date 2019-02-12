@@ -16,8 +16,8 @@ from mathutils import Vector
 
 def hit_test(pixels, resolution, xpos, ypos):
     hit = False
-    for i in range(-1, 1):
-        for j in range(-1, 1):
+    for i in range(-2, 2):
+        for j in range(-2, 2):
             if pixels[4 * (xpos + i + resolution * (ypos + j)) + 0] == 0:
                 hit = True
 
@@ -92,6 +92,8 @@ def select_interior_faces(context, obj, resolution):
     # Extract pixels to new array for performance gain
     pixels_copy = ao_map.pixels[:]
     for face in bm.faces:
+        if face.hide:
+            continue
         face_select = True
         for loop in face.loops:
             luv = loop[uv_layer]
