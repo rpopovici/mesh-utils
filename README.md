@@ -1,5 +1,11 @@
 # blender-addons
 
+## Up to date list of tools:
+- select overlapping based on KDTree/BVHTree
+- select interior faces based on AO map baking
+- select CREASE/BEVEL/SEAM/SHARP/FREESTYLE by trait instead of similarity(doesn’t require edge preselect)
+- mesh from UVs
+
 ### Select overlapping geometry
 
 I wrote this addon because blender has no proper way of detecting intersecting/overlapping geometry. The tool is context sensitive to VERT/EDGE/FACE mode.
@@ -23,7 +29,12 @@ How it works:
 - Exclude intersection pairs with same index because these are false positive as result of cloning
 - Find coplanar faces with BVHTree.find_nearest_range()
 
-These two solutions KDTree/BVHTree can be used together or separately in face mode.
+These two implementations KDTree/BVHTree can be used together or separately in face mode.
+
+### Select interior faces (AO bake)
+
+This solution is based on AO map baking. Normaly you would want to do a “bake to vertex” but this is not possible right now in b2.8. So, I am baking to image and then I am interpolating face/vertex position inside the UV map. Everything completely black in the AO map is hidden behind some geometry.
+For some reason, the baker is leaking light sometimes in areas where it should not be. You might get some false selection here. I am still trying to figure this one out.
 
 ### FAQ
 
