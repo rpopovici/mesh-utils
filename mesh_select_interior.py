@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Select Interior Faces",
     "author": "rpopovici",
-    "version": (0, 2),
+    "version": (0, 3),
     "blender": (2, 80, 0),
     "location": "(Edit Mode) Select > Select All by Trait",
     "description": "Select interior faces. This solution is based on AO map baking",
@@ -15,18 +15,51 @@ import bmesh
 from mathutils import Vector
 
 def hit_test(pixels, resolution, xpos, ypos):
-    hit = False
-    for i in range(-2, 2):
-        for j in range(-2, 2):
-            if pixels[4 * (xpos + i + resolution * (ypos + j)) + 0] == 0:
-                hit = True
+    count = 0
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            red = pixels[4 * (xpos + i + resolution * (ypos + j)) + 0]
+            alpha = pixels[4 * (xpos + i + resolution * (ypos + j)) + 3]
+            if (red == 0) and (alpha != 0):
+                count += 1
+    return count > 0
 
-    return hit
+# clean-up light leaks
+def clean_up(pixels, resolution):
+    for xpos in range(1, resolution - 1):
+        for ypos in range(1, resolution - 1):
+            red = pixels[4 * (xpos + resolution * ypos) + 0]
+            alpha = pixels[4 * (xpos + resolution * ypos) + 3]
+            if (red != 0) and (alpha != 0):
+                count = 0
+                for i in range(-1, 2):
+                    for j in range(-1, 2):
+                        r = pixels[4 * (xpos + i + resolution * (ypos + j)) + 0]
+                        a = pixels[4 * (xpos + i + resolution * (ypos + j)) + 3]
+                        if (r != 0) and (a != 0):
+                            count += 1
+                if count == 1:
+                    # remove pixel
+                    pixels[4 * (xpos + resolution * ypos) + 0] = 0.0
 
-def select_interior_faces(context, obj, resolution):
+
+def hit_test_area(pixels, resolution, xpos_min, ypos_min, xpos_max, ypos_max):
+    tolerance = 1
+    count = 0
+    for i in range(xpos_min, xpos_max + 1):
+        for j in range(ypos_min, ypos_max + 1):
+            red = pixels[4 * (i + resolution * j) + 0]
+            alpha = pixels[4 * (i + resolution * j) + 3]
+            if (red != 0) and (alpha != 0):
+                count += 1
+    return count < tolerance
+
+
+def select_interior_faces(context, obj, bake_type, resolution, samples):
     ao_map_size = resolution
     selected_objects = bpy.context.selected_objects
     context.scene.render.engine = 'CYCLES'
+    context.scene.cycles.samples = samples
     #bpy.context.scene.render.layers["RenderLayer"].cycles.use_denoising = True
 
     # add new UV layer
@@ -36,16 +69,35 @@ def select_interior_faces(context, obj, resolution):
     uv_layer.active = True
 
     # quick face unwrap
-    bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=1.0, island_margin=0.1, user_area_weight=0.0, use_aspect=True, stretch_to_bounds=True)
+    #bpy.ops.mesh.select_all(action='SELECT')
+    #bpy.ops.uv.smart_project(angle_limit=1.0, island_margin=0.01, user_area_weight=0.0, use_aspect=True, stretch_to_bounds=True)
+    bpy.ops.uv.lightmap_pack(PREF_CONTEXT='ALL_FACES', PREF_PACK_IN_ONE=True, PREF_NEW_UVLAYER=False, PREF_APPLY_IMAGE=False, PREF_IMG_PX_SIZE=ao_map_size, PREF_BOX_DIV=12, PREF_MARGIN_DIV=0.2)
     bpy.ops.mesh.select_all(action='DESELECT')
 
     # creating a new material and add a new image texture node to it
     bake_material = bpy.data.materials.new('__AO_BAKE_MAT__')
     bake_material.use_nodes = True
+    #bake_material.diffuse_color = (1, 1, 1, 1)
+    #bake_material.roughness = 0
+    #bake_material.specular_color = (1, 1, 1)
+    #bake_material.metallic = 1
+
+    #bpy.data.node_groups["Shader NodeTree"].nodes["Principled BSDF"].inputs[0].default_value = (0, 1, 0, 1)
+    bake_material.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (1, 0, 0, 1)
+    bake_material.node_tree.nodes["Principled BSDF"].inputs[4].default_value = 0
+    bake_material.node_tree.nodes["Principled BSDF"].inputs[5].default_value = 1
+    bake_material.node_tree.nodes["Principled BSDF"].inputs[7].default_value = 0
+
     image_texture_node = bake_material.node_tree.nodes.new('ShaderNodeTexImage')
     image_texture_node.select = True
     #bake_material.node_tree.nodes.active = image_texture_node
+
+    # add emission node
+    # material_output = bake_material.node_tree.nodes["Principled BSDF"] #bake_material.node_tree.nodes.get('Material Output')
+    # emission = bake_material.node_tree.nodes.new('ShaderNodeEmission')
+    # emission.inputs['Strength'].default_value = 5.0
+    # # link emission shader to material
+    # bake_material.node_tree.links.new(material_output.inputs[0], emission.outputs[0])
 
     old_mat = None
     # Assign material to object
@@ -72,8 +124,9 @@ def select_interior_faces(context, obj, resolution):
     #     if obj.hide_viewport:
     #         obj.hide_render = True
 
-    # start baking
-    bpy.ops.object.bake(type = 'AO', width = resolution, height = resolution, margin = 4) #, uv_layer = uv_layer.name)
+    # ['COMBINED', 'AO', 'SHADOW', 'NORMAL', 'UV', 'ROUGHNESS', 'EMIT', 'ENVIRONMENT', 'DIFFUSE', 'GLOSSY', 'TRANSMISSION', 'SUBSURFACE']
+    # pass_filter = {'NONE', 'AO', 'EMIT', 'DIRECT', 'INDIRECT', 'COLOR', 'DIFFUSE', 'GLOSSY', 'TRANSMISSION', 'SUBSURFACE'}
+    bpy.ops.object.bake(type = bake_type,  width = resolution, height = resolution, margin = 0) #, uv_layer = uv_layer.name)
 
     # select "black" faces from AO
     me = obj.data
@@ -90,7 +143,14 @@ def select_interior_faces(context, obj, resolution):
     #         l[uv_layer].uv += Vector((0.005, 0.005))
 
     # Extract pixels to new array for performance gain
-    pixels_copy = ao_map.pixels[:]
+    pixels_copy = list(ao_map.pixels[:])
+    clean_up(pixels_copy, resolution)
+
+    # determine bbox
+    xpos_min = float("inf")
+    xpos_max = float("-inf")
+    ypos_min = float("inf")
+    ypos_max = float("-inf")
     for face in bm.faces:
         if face.hide:
             continue
@@ -100,11 +160,27 @@ def select_interior_faces(context, obj, resolution):
             uv = luv.uv
             xpos = round(uv.x * (resolution - 1))
             ypos = round(uv.y * (resolution - 1))
+            if xpos_min > xpos:
+                xpos_min = xpos
+            if xpos_max < xpos:
+                xpos_max = xpos
+            if ypos_min > ypos:
+                ypos_min = ypos
+            if ypos_max < ypos:
+                ypos_max = ypos
             # select face if RED color channel is black
             #if ao_map.pixels[4 * (xpos + resolution * ypos) + 0] != 0:
-            if not hit_test(pixels_copy, resolution, xpos, ypos):
-                face_select = False
+            #if not hit_test(pixels_copy, resolution, xpos, ypos):
+            #    face_select = False
+        if not hit_test_area(pixels_copy, resolution, xpos_min, ypos_min, xpos_max, ypos_max):
+            face_select = False
         face.select_set(face_select)
+
+        xpos_min = float("inf")
+        xpos_max = float("-inf")
+        ypos_min = float("inf")
+        ypos_max = float("-inf")
+
 
     bmesh.update_edit_mesh(me)
 
@@ -129,12 +205,34 @@ class SelectInteriorFaces(bpy.types.Operator):
     bl_label = 'Select interior faces'
     bl_options = {'REGISTER', 'UNDO'}
 
-    resolution: bpy.props.IntProperty(
-        name = "Resolution",
-        default = 512,
-        min = 512,
-        max = 4096,
-        description = "AO bake image size",
+    bake_type: bpy.props.EnumProperty(
+        items=[
+                ('AO', "AO", "Bake AO map for occlusion detection"),
+                ('DIFFUSE', "DIFFUSE", "Bake Diffuse map for occlusion detection. Lights are required to properly illuminate hidden areas you wish to keep"),
+                ],
+        name="Bake Mode",
+        description="",
+        )
+
+    resolution: bpy.props.EnumProperty(
+        items=[
+                ('256', "256", ""),
+                ('512', "512", ""),
+                ('1024', "1024", ""),
+                ('2048', "2048", ""),
+                ('4096', "4096", ""),
+                ],
+        name="Resolution",
+        default="512",
+        description="",
+        )
+
+    samples: bpy.props.IntProperty(
+        name = "Samples",
+        default = 128,
+        min = 1,
+        max = 102400,
+        description = "Cycles rendering samples per pixel",
         )
 
     @classmethod
@@ -143,7 +241,7 @@ class SelectInteriorFaces(bpy.types.Operator):
 
     def execute(self, context):
         obj = context.active_object
-        select_interior_faces(context, obj, self.resolution)
+        select_interior_faces(context, obj, self.bake_type, int(self.resolution), self.samples)
         return {'FINISHED'}
 
     def invoke(self, context, event):
