@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Select Interior Faces",
     "author": "rpopovici",
-    "version": (0, 3),
+    "version": (0, 4),
     "blender": (2, 80, 0),
     "location": "(Edit Mode) Select > Select All by Trait",
     "description": "Select interior faces. This solution is based on AO map baking",
@@ -38,7 +38,7 @@ def clean_up(pixels, resolution):
                         a = pixels[4 * (xpos + i + resolution * (ypos + j)) + 3]
                         if (r != 0) and (a != 0):
                             count += 1
-                if count == 1:
+                if (count > 0) and (count < 3):
                     # remove pixel
                     pixels[4 * (xpos + resolution * ypos) + 0] = 0.0
 
@@ -55,12 +55,56 @@ def hit_test_area(pixels, resolution, xpos_min, ypos_min, xpos_max, ypos_max):
     return count < tolerance
 
 
-def select_interior_faces(context, obj, bake_type, resolution, samples):
+def select_interior_faces(context, obj, bake_type, resolution, samples, bounces):
     ao_map_size = resolution
     selected_objects = bpy.context.selected_objects
     context.scene.render.engine = 'CYCLES'
     context.scene.cycles.samples = samples
     #bpy.context.scene.render.layers["RenderLayer"].cycles.use_denoising = True
+
+    ##sampling;=path tracing 
+    bpy.context.scene.cycles.progressive = 'PATH'
+    #bpy.context.scene.cycles.samples = 50
+    bpy.context.scene.cycles.max_bounces = bounces
+    bpy.context.scene.cycles.min_bounces = bounces
+    bpy.context.scene.cycles.diffuse_bounces = bounces
+    bpy.context.scene.cycles.glossy_bounces = 0
+    bpy.context.scene.cycles.transmission_bounces = 0
+    bpy.context.scene.cycles.volume_bounces = 0
+    bpy.context.scene.cycles.transparent_max_bounces = 0
+    bpy.context.scene.cycles.transparent_min_bounces = 0
+    #bpy.context.scene.cycles.use_progressive_refine = True
+
+    context.scene.cycles.sample_clamp_indirect = 0.0
+
+    context.scene.cycles.blur_glossy = 0.0
+    bpy.context.scene.cycles.caustics_reflective = False
+    bpy.context.scene.cycles.caustics_refractive = False
+
+    # bpy.context.scene.render.tile_x = 64
+    # bpy.context.scene.render.tile_y = 64
+
+    # context.scene.render.use_simplify = True
+    # bpy.context.scene.cycles.ao_bounces_render = 64
+    
+    # world light
+    world = bpy.data.worlds['World']
+    world.use_nodes = True
+
+    # changing these values does affect the render.
+    bg = world.node_tree.nodes['Background']
+    bg.inputs[0].default_value[:3] = (1.0, 1.0, 1.0)
+    bg.inputs[1].default_value = 1.0
+
+    world.cycles_visibility.camera = False
+    world.cycles_visibility.glossy = False
+    world.cycles_visibility.transmission = False
+    world.cycles_visibility.scatter = False
+
+    world.cycles.sampling_method = 'MANUAL'
+    world.cycles.sample_map_resolution = 1024
+    #world.cycles.max_bounces = 2048
+    #world.cycles.volume_sampling = "MULTIPLE_IMPORTANCE"
 
     # add new UV layer
     uv_layer =  obj.data.uv_layers.get("__AO_UV_LAYER__")
@@ -83,7 +127,7 @@ def select_interior_faces(context, obj, bake_type, resolution, samples):
     #bake_material.metallic = 1
 
     #bpy.data.node_groups["Shader NodeTree"].nodes["Principled BSDF"].inputs[0].default_value = (0, 1, 0, 1)
-    bake_material.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (1, 0, 0, 1)
+    bake_material.node_tree.nodes["Principled BSDF"].inputs[0].default_value = (1, 1, 1, 1)
     bake_material.node_tree.nodes["Principled BSDF"].inputs[4].default_value = 0
     bake_material.node_tree.nodes["Principled BSDF"].inputs[5].default_value = 1
     bake_material.node_tree.nodes["Principled BSDF"].inputs[7].default_value = 0
@@ -211,28 +255,36 @@ class SelectInteriorFaces(bpy.types.Operator):
                 ('DIFFUSE', "DIFFUSE", "Bake Diffuse map for occlusion detection. Lights are required to properly illuminate hidden areas you wish to keep"),
                 ],
         name="Bake Mode",
+        default="DIFFUSE",
         description="",
         )
 
     resolution: bpy.props.EnumProperty(
         items=[
-                ('256', "256", ""),
                 ('512', "512", ""),
                 ('1024', "1024", ""),
                 ('2048', "2048", ""),
                 ('4096', "4096", ""),
                 ],
         name="Resolution",
-        default="512",
+        default="1024",
         description="",
         )
 
     samples: bpy.props.IntProperty(
         name = "Samples",
-        default = 128,
+        default = 32,
         min = 1,
         max = 102400,
         description = "Cycles rendering samples per pixel",
+        )
+
+    bounces: bpy.props.IntProperty(
+        name = "Bounces",
+        default = 128,
+        min = 1,
+        max = 1024,
+        description = "Cycles rendering light bounces",
         )
 
     @classmethod
@@ -241,7 +293,7 @@ class SelectInteriorFaces(bpy.types.Operator):
 
     def execute(self, context):
         obj = context.active_object
-        select_interior_faces(context, obj, self.bake_type, int(self.resolution), self.samples)
+        select_interior_faces(context, obj, self.bake_type, int(self.resolution), self.samples, self.bounces)
         return {'FINISHED'}
 
     def invoke(self, context, event):
@@ -249,7 +301,7 @@ class SelectInteriorFaces(bpy.types.Operator):
         return {"FINISHED"}
 
 def menu_func(self, context):
-    self.layout.operator(SelectInteriorFaces.bl_idname, text="Interior Faces (AO Bake)")
+    self.layout.operator(SelectInteriorFaces.bl_idname, text="Interior Faces (Cycles Bake)")
 
 def register():
     bpy.utils.register_class(SelectInteriorFaces)
