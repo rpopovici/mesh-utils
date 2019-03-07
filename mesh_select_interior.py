@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Select Interior Faces",
     "author": "rpopovici",
-    "version": (0, 4),
+    "version": (0, 5),
     "blender": (2, 80, 0),
     "location": "(Edit Mode) Select > Select All by Trait",
     "description": "Select interior faces. This solution is based on AO map baking",
@@ -255,7 +255,7 @@ class SelectInteriorFaces(bpy.types.Operator):
                 ('DIFFUSE', "DIFFUSE", "Bake Diffuse map for occlusion detection. Lights are required to properly illuminate hidden areas you wish to keep"),
                 ],
         name="Bake Mode",
-        default="DIFFUSE",
+        default="AO",
         description="",
         )
 
@@ -267,7 +267,7 @@ class SelectInteriorFaces(bpy.types.Operator):
                 ('4096', "4096", ""),
                 ],
         name="Resolution",
-        default="1024",
+        default="512",
         description="",
         )
 
