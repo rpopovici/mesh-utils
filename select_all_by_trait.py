@@ -128,7 +128,7 @@ class SelectAllByTrait(bpy.types.Operator):
     def select_all_by_trait(self, context):
         # force context update in edit mode
         # apparently there's a bug in scene.update()
-        bpy.context.scene.update()
+        #bpy.context.scene.update()
         mode = bpy.context.object.mode
         if mode != 'OBJECT':
             bpy.ops.object.mode_set(mode = 'OBJECT')

@@ -437,7 +437,7 @@ class SelectOverlapping(bpy.types.Operator):
 
         # force context update in edit mode
         # apparently there's a bug in scene.update()
-        bpy.context.scene.update()
+        #bpy.context.scene.update()
         mode = bpy.context.object.mode
         if mode != 'OBJECT':
             bpy.ops.object.mode_set(mode = 'OBJECT')
