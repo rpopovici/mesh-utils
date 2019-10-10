@@ -31,10 +31,14 @@ How it works:
 
 These two implementations KDTree/BVHTree can be used together or separately in face mode.
 
+![Screenshot](overlapping.jpeg)
+
 ### Select interior faces (AO bake)
 
 This solution is based on AO map baking. Normaly you would want to do a “bake to vertex” but this is not possible right now in b2.8. So, I am baking to image and then I am interpolating face/vertex position inside the UV map. Everything completely black in the AO map is hidden behind some geometry.
 For some reason, the baker is leaking light sometimes in areas where it should not be. You might get some false selection here. I am still trying to figure this one out.
+
+![Screenshot](interior.jpeg)
 
 ### FAQ
 
