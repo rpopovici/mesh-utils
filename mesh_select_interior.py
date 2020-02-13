@@ -6,7 +6,7 @@ bl_info = {
     "location": "(Edit Mode) Select > Select All by Trait",
     "description": "Select interior faces. This solution is based on AO map baking",
     "warning": "",
-    "wiki_url": "https://github.com/rpopovici/blender-addons",
+    "wiki_url": "https://github.com/rpopovici/mesh-utils",
     "category": "Mesh",
     }
 
@@ -304,16 +304,16 @@ def menu_func(self, context):
     self.layout.operator(SelectInteriorFaces.bl_idname, text="Interior Faces (Cycles Bake)")
 
 def register():
-    bpy.utils.register_class(SelectInteriorFaces)
+    # bpy.utils.register_class(SelectInteriorFaces)
 
     # Add "Extras" menu to the "Add Mesh" menu
     bpy.types.VIEW3D_MT_edit_mesh_select_by_trait.append(menu_func)
 
 def unregister():
-    bpy.utils.unregister_class(SelectInteriorFaces)
+    # bpy.utils.unregister_class(SelectInteriorFaces)
 
     # Remove "Extras" menu from the "Add Mesh" menu.
     bpy.types.VIEW3D_MT_edit_mesh_select_by_trait.remove(menu_func)
 
-if __name__ == "__main__":
-    register()
+# if __name__ == "__main__":
+#     register()

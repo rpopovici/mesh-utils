@@ -6,7 +6,7 @@ bl_info = {
     "location": "(Edit Mode) Select > Select All by Trait",
     "description": "Select Bevel/Crease/Seam/Sharp/Freestyle by Trait",
     "warning": "",
-    "wiki_url": "https://github.com/rpopovici/blender-addons",
+    "wiki_url": "https://github.com/rpopovici/mesh-utils",
     "category": "Mesh",
     }
 
@@ -156,14 +156,14 @@ def menu_func(self, context):
     self.layout.operator(SelectAllByTrait.bl_idname, text="Freestyle").select_type = 'FREESTYLE'
 
 def register():
-    bpy.utils.register_class(SelectAllByTrait)
+    # bpy.utils.register_class(SelectAllByTrait)
 
     bpy.types.VIEW3D_MT_edit_mesh_select_by_trait.append(menu_func)
 
 def unregister():
-    bpy.utils.unregister_class(SelectAllByTrait)
+    # bpy.utils.unregister_class(SelectAllByTrait)
 
     bpy.types.VIEW3D_MT_edit_mesh_select_by_trait.remove(menu_func)
 
-if __name__ == "__main__":
-    register()
+# if __name__ == "__main__":
+#     register()

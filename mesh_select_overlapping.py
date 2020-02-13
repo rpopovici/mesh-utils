@@ -6,7 +6,7 @@ bl_info = {
     "location": "(Edit Mode) Select > Select All by Trait",
     "description": "Select overlapping vertices/edges/faces",
     "warning": "",
-    "wiki_url": "https://github.com/rpopovici/blender-addons",
+    "wiki_url": "https://github.com/rpopovici/mesh-utils",
     "category": "Mesh",
     }
 
@@ -468,12 +468,12 @@ def menu_func(self, context):
     self.layout.operator(SelectOverlapping.bl_idname, text="Select Overlapping")
 
 def register():
-   bpy.utils.register_class(SelectOverlapping)
-   bpy.types.VIEW3D_MT_edit_mesh_select_by_trait.append(menu_func)
+    # bpy.utils.register_class(SelectOverlapping)
+    bpy.types.VIEW3D_MT_edit_mesh_select_by_trait.append(menu_func)
 
 def unregister():
-    bpy.utils.unregister_class(SelectOverlapping)
+    # bpy.utils.unregister_class(SelectOverlapping)
     bpy.types.VIEW3D_MT_edit_mesh_select_by_trait.remove(menu_func)
 
-if __name__ == "__main__":
-    register()
+# if __name__ == "__main__":
+#     register()

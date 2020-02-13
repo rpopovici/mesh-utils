@@ -6,7 +6,7 @@ bl_info = {
     "location": "(Object Mode) Add > Mesh > Mesh from UVs",
     "description": "Create mesh from UVs",
     "warning": "",
-    "wiki_url": "https://github.com/rpopovici/blender-addons",
+    "wiki_url": "https://github.com/rpopovici/mesh-utils",
     "category": "Mesh",
     }
 
@@ -89,16 +89,16 @@ def menu_func(self, context):
     self.layout.operator(MeshFromUV.bl_idname, text="Mesh From UVs")
 
 def register():
-    bpy.utils.register_class(MeshFromUV)
+    # bpy.utils.register_class(MeshFromUV)
 
     # Add "Extras" menu to the "Add Mesh" menu
     bpy.types.VIEW3D_MT_mesh_add.append(menu_func)
 
 def unregister():
-    bpy.utils.unregister_class(MeshFromUV)
+    # bpy.utils.unregister_class(MeshFromUV)
 
     # Remove "Extras" menu from the "Add Mesh" menu.
     bpy.types.VIEW3D_MT_mesh_add.remove(menu_func)
 
-if __name__ == "__main__":
-    register()
+# if __name__ == "__main__":
+#     register()
