@@ -267,15 +267,15 @@ class SelectInteriorFaces(bpy.types.Operator):
                 ('4096', "4096", ""),
                 ],
         name="Resolution",
-        default="512",
+        default="1024",
         description="",
         )
 
     samples: bpy.props.IntProperty(
         name = "Samples",
-        default = 32,
+        default = 64,
         min = 1,
-        max = 102400,
+        max = 1024,
         description = "Cycles rendering samples per pixel",
         )
 
