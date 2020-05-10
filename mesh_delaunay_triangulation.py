@@ -28,14 +28,26 @@ def create_object_from_data(context, name, verts, edges, faces):
     # populate mesh with data from given verts & faces
     mesh.from_pydata(verts, edges, faces)
     mesh.update()
+
+    # wireframe display
+    obj.show_wire = True
+
     return obj
 
 def delaunay_triangulate(context, obj, output_type, epsilon):
-    vert_coords = [vtx.co.to_2d() for vtx in obj.data.vertices]
-    edges = [edge.vertices for edge in obj.data.edges]
-    faces = [[obj.data.loops[loop_index].vertex_index for loop_index in face.loop_indices] for face in obj.data.polygons]
+    depsgraph = context.evaluated_depsgraph_get()
+    obj_eval = obj.evaluated_get(depsgraph)
+    mesh_eval = obj_eval.to_mesh()
+
+    vert_coords = [vtx.co.to_2d() for vtx in mesh_eval.vertices]
+    edges = [edge.vertices for edge in mesh_eval.edges]
+    faces = [[mesh_eval.loops[loop_index].vertex_index for loop_index in face.loop_indices] for face in mesh_eval.polygons]
 
     (out_coords, out_edges, out_faces, orig_verts, orig_edges, orig_faces) = delaunay_2d_cdt(vert_coords, edges, faces, output_type, epsilon)
+
+    obj_eval.to_mesh_clear()
+    #bpy.data.meshes.remove(mesh_eval)
+
     return ([co.to_3d() for co in out_coords], out_edges, out_faces)
 
 class DelaunayTriangulation(bpy.types.Operator):
@@ -58,10 +70,12 @@ class DelaunayTriangulation(bpy.types.Operator):
 
     epsilon: bpy.props.FloatProperty(
         name = "Epsilon",
+        subtype ='DISTANCE',
         default = 0.0001,
         min = 0.000001,
         max = 1.0,
         description = "Epsilon",
+        unit ='LENGTH',
         )
 
     @classmethod
@@ -80,6 +94,9 @@ class DelaunayTriangulation(bpy.types.Operator):
         obj = context.active_object
         (out_verts, out_edges, out_faces) = delaunay_triangulate(context, obj, int(self.output_type), self.epsilon)
         create_object_from_data(context, obj.name + '_TRIS', out_verts, out_edges, out_faces)
+
+        # Hide the object in the viewport
+        obj.hide_set(True)
 
 def menu_func(self, context):
     self.layout.operator(DelaunayTriangulation.bl_idname, text="Delaunay Triangulation")
