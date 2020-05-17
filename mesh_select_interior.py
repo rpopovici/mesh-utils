@@ -245,7 +245,7 @@ def select_interior_faces(context, obj, bake_type, resolution, samples, bounces)
 
 class SelectInteriorFaces(bpy.types.Operator):
     """Select Interior Faces"""
-    bl_idname = 'mesh.select_interior_faces'
+    bl_idname = 'mesh.select_interior_faces_bake'
     bl_label = 'Select interior faces'
     bl_options = {'REGISTER', 'UNDO'}
 
