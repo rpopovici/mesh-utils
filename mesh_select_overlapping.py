@@ -27,6 +27,8 @@ def measure (first, second):
 	return distance
 
 def collinear(vec1, vec2, epsilon):
+    if (vec1.length == 0.0) or (vec2.length == 0.0):
+        return False
     return ((vec1.angle(vec2) < epsilon) or (abs(radians(180) - vec1.angle(vec2)) < epsilon))
 
 def adjacent(face, another_face):
