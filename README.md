@@ -1,6 +1,4 @@
-# mesh-utils
-
-https://twitter.com/radu_popovic
+# mesh-utils <a href="https://twitter.com/radu_popovic?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">Follow @radu_popovic</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
 ## Up to date list of tools:
 - select overlapping based on KDTree/BVHTree
