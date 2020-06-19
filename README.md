@@ -1,4 +1,5 @@
-# mesh-utils [Follow @radu_popovic](https://twitter.com/radu_popovic?ref_src=twsrc%5Etfw)
+# mesh-utils 
+[Follow @radu_popovic](https://twitter.com/radu_popovic?ref_src=twsrc%5Etfw)
 
 ## Up to date list of tools:
 - select overlapping based on KDTree/BVHTree
