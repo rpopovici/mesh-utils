@@ -1,4 +1,6 @@
-# blender-addons
+# mesh-utils
+
+https://twitter.com/radu_popovic
 
 ## Up to date list of tools:
 - select overlapping based on KDTree/BVHTree
